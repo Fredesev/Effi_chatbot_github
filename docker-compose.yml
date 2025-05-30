@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: effi-backend
     expose:
-      - 8000  # Gør porten synlig for andre services (ikke direkte til browser)
+      - 8000  
     volumes:
       - ./chatbot.db:/app/chatbot.db
     networks:
@@ -17,7 +17,7 @@ services:
     image: nginx:latest
     container_name: effi-frontend
     ports:
-      - "80:80"  # Browser tilgår på http://localhost
+      - "80:80"  
     volumes:
       - ./frontend:/usr/share/nginx/html
       - ./nginx.conf:/etc/nginx/conf.d/default.conf

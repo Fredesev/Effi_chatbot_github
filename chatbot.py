@@ -16,26 +16,23 @@ import requests
 import os
 
 app = FastAPI()
-# Rate limiting
+
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(429, _rate_limit_exceeded_handler)
 
-# Global kontekst pr. bruger (simpel hukommelse i RAM)
 user_contexts = {}
 
-# Sikkerhed
+
 SECRET_KEY = os.getenv("SECRET_KEY", "meget-hemmelig-nøgle")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-# Dette er en testkommentar for at udløse git commit
 
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Til udvikling
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]

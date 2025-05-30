@@ -1,10 +1,8 @@
 import sqlite3
 
-# Tilslut til databasen
 conn = sqlite3.connect("chatbot.db")
 cursor = conn.cursor()
 
-# Spørgsmål og svar
 qa_pairs = [
     ("Hvordan nulstiller jeg min adgangskode?", "Du kan nulstille adgangskoden via IT-portalen under 'Adgangskodeadministration'."),
     ("Hvad gør jeg, hvis printeren ikke virker?", "Tjek først strøm og forbindelser. Genstart derefter printeren og din computer."),
@@ -42,7 +40,6 @@ qa_pairs = [
     ("Hvordan laver jeg en skærmklip?", "Tryk Windows+Shift+S for at bruge værktøjet 'Skærmklip'.")
 ]
 
-# Indsæt kun spørgsmål der ikke allerede findes
 for question, answer in qa_pairs:
     cursor.execute("SELECT 1 FROM knowledge_base WHERE question = ?", (question,))
     if not cursor.fetchone():
