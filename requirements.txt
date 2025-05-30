@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+gunicorn
+slowapi
+bcrypt
+python-multipart
+python-jose
+duckduckgo-search==7.5.4
+requests

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Effi | Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Inter&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: #E4F2EA;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
+      background-color: #2D5652;
+      color: white;
+    }
+
+    .brand {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6em;
+    }
+
+    #logout-btn {
+      background-color: #CC1716;
+      border: none;
+      padding: 10px 16px;
+      color: white;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    main {
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2em;
+      color: #2D5652;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .menu {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .menu button {
+      margin: 10px;
+      padding: 14px 28px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      background-color: #2D5652;
+      color: white;
+      cursor: pointer;
+    }
+
+    .menu button:hover {
+      background-color: #1f3e3c;
+    }
+
+    #logs-container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+
+    ul {
+      padding-left: 20px;
+    }
+
+    li {
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Effi</div>
+    <button id="logout-btn" onclick="logout()">Log ud</button>
+  </header>
+
+  <main>
+    <h1>Velkommen, <span id="username-display"></span> 👋</h1>
+
+    <div class="menu">
+      <button onclick="window.location.href='index.html'">Stil et spørgsmål</button>
+      <button id="admin-button" style="display:none;" onclick="window.location.href='add_question.html'">Tilføj spørgsmål (Admin)</button>
+    </div>
+
+    <h2 style="color:#2D5652;">Dine tidligere spørgsmål</h2>
+    <div id="logs-container">Henter dine spørgsmål...</div>
+  </main>
+
+  <script>
+    const username = localStorage.getItem("username");
+    const token = localStorage.getItem("token");
+
+    if (!username || !token) {
+      alert("Du er ikke logget ind.");
+      window.location.href = "login.html";
+    } else {
+      document.getElementById("username-display").textContent = username;
+      if (username === "admin") {
+        document.getElementById("admin-button").style.display = "inline-block";
+      }
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = "login.html";
+    }
+
+    window.onload = async function () {
+      const container = document.getElementById("logs-container");
+
+      try {
+        const response = await fetch("/my_logs", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.logs.length === 0) {
+            container.innerHTML = "<p>Du har ikke stillet nogen spørgsmål endnu.</p>";
+          } else {
+            let html = "<ul>";
+            data.logs.forEach(log => {
+              html += `<li><strong>[${log.timestamp}]</strong> ${log.question} → <em>${log.answer}</em></li>`;
+            });
+            html += "</ul>";
+            container.innerHTML = html;
+          }
+        } else {
+          container.innerHTML = "<p class='error'>Kunne ikke hente dine spørgsmål. Prøv at logge ind igen.</p>";
+        }
+      } catch (error) {
+        container.innerHTML = "<p class='error'>Serverfejl. Prøv igen senere.</p>";
+      }
+    };
+  </script>
+</body>
+</html>
+
+
+
+
+

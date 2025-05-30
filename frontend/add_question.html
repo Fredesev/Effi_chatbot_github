@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Effi | Tilføj spørgsmål</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Inter&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: #E4F2EA;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      background-color: #2D5652;
+      color: white;
+      padding: 20px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6em;
+    }
+
+    #logout-btn {
+      background-color: #CC1716;
+      border: none;
+      padding: 10px 16px;
+      color: white;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    form {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+      max-width: 500px;
+      width: 100%;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.8em;
+      color: #2D5652;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    label {
+      font-weight: bold;
+      color: #2D5652;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      margin-top: 8px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+
+    button {
+      background-color: #2D5652;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    button:hover {
+      background-color: #1f3e3c;
+    }
+
+    #success, #error {
+      margin-top: 20px;
+      text-align: center;
+      font-weight: bold;
+      display: none;
+    }
+
+    #success {
+      color: green;
+    }
+
+    #error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Effi</div>
+    <button id="logout-btn" onclick="logout()">Log ud</button>
+  </header>
+
+  <main>
+    <form id="question-form">
+      <h1>Tilføj nyt spørgsmål</h1>
+
+      <label for="question">Spørgsmål:</label>
+      <input type="text" id="question" required>
+
+      <label for="answer">Svar:</label>
+      <textarea id="answer" rows="4" required></textarea>
+
+      <button type="submit">Gem</button>
+      <p id="success">✅ Spørgsmålet blev tilføjet!</p>
+      <p id="error">❌ Der opstod en fejl!</p>
+    </form>
+  </main>
+
+  <script>
+    const token = localStorage.getItem("token");
+    const username = localStorage.getItem("username");
+
+    if (!token || !username) {
+      alert("Du er ikke logget ind.");
+      window.location.href = "login.html";
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = "login.html";
+    }
+
+    document.getElementById("question-form").addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const question = document.getElementById("question").value;
+      const answer = document.getElementById("answer").value;
+
+      try {
+        const response = await fetch("/add_question", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ question, answer })
+        });
+
+        if (response.ok) {
+          document.getElementById("success").style.display = "block";
+          document.getElementById("error").style.display = "none";
+          document.getElementById("question-form").reset();
+        } else {
+          const data = await response.json();
+          document.getElementById("error").textContent = data.detail || "Der opstod en fejl!";
+          document.getElementById("error").style.display = "block";
+          document.getElementById("success").style.display = "none";
+        }
+      } catch (err) {
+        document.getElementById("error").textContent = "Netværksfejl. Prøv igen senere.";
+        document.getElementById("error").style.display = "block";
+        document.getElementById("success").style.display = "none";
+      }
+    });
+  </script>
+</body>
+</html>
+
+
+
+

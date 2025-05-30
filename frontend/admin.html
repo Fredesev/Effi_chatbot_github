@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <title>Adminpanel – Websøgningsadgang</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 12px;
+      text-align: left;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #2ED3C4;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #1ea49a;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>👩‍💼 Adminpanel: Websøgningsadgang</h1>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Brugernavn</th>
+        <th>Rolle</th>
+        <th>Må søge på nettet</th>
+      </tr>
+    </thead>
+    <tbody id="userTableBody"></tbody>
+  </table>
+
+  <button onclick="saveChanges()">Gem ændringer</button>
+
+  <script>
+    let users = [];
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        alert("Du er ikke logget ind.");
+        window.location.href = "login.html";
+        return;
+      }
+
+      fetchUsers(token);
+    });
+
+    async function fetchUsers(token) {
+      try {
+        const res = await fetch("/admin/users", {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+
+        const contentType = res.headers.get("content-type");
+        console.log("🔎 Content-Type:", contentType);
+
+        const text = await res.text();
+        console.log("📄 Rå response:", text);
+
+        try {
+          const data = JSON.parse(text);
+          console.log("✅ Parsed JSON:", data);
+          users = data;
+          renderTable();
+        } catch (jsonErr) {
+          console.error("❌ JSON parse-fejl:", jsonErr);
+          alert("Serveren returnerede ikke gyldig JSON.");
+        }
+      } catch (err) {
+        console.error("❌ Netværksfejl:", err);
+        alert("Der opstod en netværksfejl.");
+      }
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById("userTableBody");
+      tbody.innerHTML = "";
+
+      users.forEach((user, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${user.username}</td>
+          <td>${user.role}</td>
+          <td><input type="checkbox" ${user.can_search_web ? "checked" : ""} onchange="updatePermission(${index}, this.checked)"></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function updatePermission(index, value) {
+      users[index].can_search_web = value;
+    }
+
+    async function saveChanges() {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/admin/update_web_access", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ users })
+      });
+
+      if (res.ok) {
+        alert("✅ Adgange er opdateret!");
+      } else {
+        alert("❌ Noget gik galt ved opdatering.");
+      }
+    }
+  </script>
+</body>
+</html>
+
+
+
