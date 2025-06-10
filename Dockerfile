@@ -7,6 +7,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
+COPY frontend/ /app/frontend/
 
 CMD ["uvicorn", "chatbot:app", "--host", "0.0.0.0", "--port", "8000"]
 
