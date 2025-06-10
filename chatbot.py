@@ -10,6 +10,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from duckduckgo_search import DDGS
 from typing import List
+from fastapi.responses import HTMLResponse
 import sqlite3
 import bcrypt
 import requests
@@ -224,13 +225,122 @@ def update_web_access(data: PermissionUpdateRequest, current_user: dict = Depend
     conn.close()
     return {"message": "Webadgange opdateret"}
 
+@app.get("/admin/logs", response_class=HTMLResponse)
+async def show_logs():
+    conn = sqlite3.connect("chatbot.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM logs ORDER BY timestamp DESC")
+    rows = cursor.fetchall()
+    conn.close()
+
+    html = """
+    <html>
+        <head>
+            <title>Seneste logs</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+                th { background-color: #f2f2f2; }
+            </style>
+        </head>
+        <body>
+            <h1>Seneste logs</h1>
+            <table>
+                <tr>
+                    <th>ID</th>
+                    <th>Brugernavn</th>
+                    <th>Spørgsmål</th>
+                    <th>Svar</th>
+                    <th>Timestamp</th>
+                </tr>
+    """
+    for row in rows:
+        html += "<tr>"
+        for cell in row:
+            html += f"<td>{cell}</td>"
+        html += "</tr>"
+
+    html += """
+            </table>
+        </body>
+    </html>
+    """
+    return html
+
+@app.get("/admin/feedback", response_class=HTMLResponse)
+async def show_feedback():
+    conn = sqlite3.connect("chatbot.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM feedback ORDER BY timestamp DESC")
+    rows = cursor.fetchall()
+    conn.close()
+
+    html = """
+    <html>
+        <head>
+            <title>Feedbackoversigt</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+                th { background-color: #f2f2f2; }
+            </style>
+        </head>
+        <body>
+            <h1>Feedbackoversigt</h1>
+            <table>
+                <tr>
+                    <th>ID</th>
+                    <th>Brugernavn</th>
+                    <th>Spørgsmål</th>
+                    <th>Nyttigt?</th>
+                    <th>Timestamp</th>
+                </tr>
+    """
+    for row in rows:
+        html += "<tr>"
+        for cell in row:
+            html += f"<td>{cell}</td>"
+        html += "</tr>"
+
+    html += """
+            </table>
+        </body>
+    </html>
+    """
+    return html
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_dashboard():
+    html = """
+    <html>
+        <head>
+            <title>Admin Dashboard</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 30px; }
+                a { display: block; margin: 15px 0; font-size: 18px; }
+            </style>
+        </head>
+        <body>
+            <h1>Admin Dashboard</h1>
+            <a href="/admin/logs">📄 Se seneste logs</a>
+            <a href="/admin/feedback">⭐ Se bruger-feedback</a>
+        </body>
+    </html>
+    """
+    return html
+
+
 @app.get("/health")
 def health_check():
     return {"message": "Effi er klar 🚀"}
 
 app.mount("/", StaticFiles(directory="frontend", html=True), name="static")
 
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("chatbot:app", host="0.0.0.0", port=8000)
+
 
