@@ -12,6 +12,7 @@ from duckduckgo_search import DDGS
 from typing import List
 from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv
+from fastapi import Body
 import psycopg2
 import bcrypt
 import requests
@@ -30,7 +31,6 @@ app.state.limiter = limiter
 app.add_exception_handler(429, _rate_limit_exceeded_handler)
 
 user_contexts = {}
-
 
 SECRET_KEY = os.getenv("SECRET_KEY", "meget-hemmelig-nøgle")
 ALGORITHM = "HS256"
@@ -182,16 +182,40 @@ def chat(request: Request, payload: ChatPayload, user: dict = Depends(get_curren
         log_interaction(username, user_question, answer)
         return {"answer": answer}
 
+    # 💡 Websøgning kræver bekræftelse
     if not payload.confirm_external:
         return JSONResponse(content={
             "require_confirmation": True,
             "response": "⚠️ Du er ved at foretage en websøgning uden for det interne system."
         })
 
+    # 🔍 Søgning med Serper hvis ikke fundet internt
     answer = search_serper(user_question)
     context.append({"role": "assistant", "content": answer})
     log_interaction(username, user_question, answer)
     return {"answer": answer}
+
+
+
+@app.post("/feedback")
+def save_feedback(
+    username: str = Body(...),
+    question: str = Body(...),
+    answer: str = Body(...),
+    helpful: bool = Body(...),
+    user: dict = Depends(get_current_user)
+):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO feedback (username, question, answer, helpful) VALUES (%s, %s, %s, %s)",
+        (username, question, answer, helpful)
+    )
+    conn.commit()
+    conn.close()
+    return {"message": "Feedback gemt!"}
+
+
 
 @app.post("/add_question")
 def add_question(query: Query, user: dict = Depends(get_current_user)):
