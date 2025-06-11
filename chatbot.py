@@ -26,6 +26,9 @@ def get_db_connection():
 
 app = FastAPI()
 
+app.mount("/", StaticFiles(directory="frontend", html=True), name="static")
+
+
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(429, _rate_limit_exceeded_handler)
@@ -379,8 +382,6 @@ async def admin_dashboard():
 @app.get("/health")
 def health_check():
     return {"message": "Effi er klar 🚀"}
-
-app.mount("/", StaticFiles(directory="frontend", html=True), name="static")
 
 if __name__ == "__main__":
     import uvicorn
