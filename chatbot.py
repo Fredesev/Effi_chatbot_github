@@ -158,9 +158,13 @@ def search_serper(query):
 def log_interaction(username, question, answer):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO logs (username, question, answer) VALUES (%s, %s, %s)", (username, question, answer))
+    cursor.execute(
+        "INSERT INTO logs (username, question, answer) VALUES (%s, %s, %s)",
+        (username, question, answer)
+    )
     conn.commit()
     conn.close()
+
 
 @limiter.limit("10/minute")
 @app.post("/chat")
