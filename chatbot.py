@@ -11,10 +11,17 @@ from slowapi.util import get_remote_address
 from duckduckgo_search import DDGS
 from typing import List
 from fastapi.responses import HTMLResponse
-import sqlite3
+from dotenv import load_dotenv
+import psycopg2
 import bcrypt
 import requests
 import os
+
+load_dotenv()
+
+def get_db_connection():
+    return psycopg2.connect(os.getenv("DATABASE_URL"))
+
 
 app = FastAPI()
 
@@ -54,9 +61,9 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         if username is None:
             raise HTTPException(status_code=401, detail="Invalid token")
 
-        conn = sqlite3.connect("chatbot.db")
+        conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, username, role, can_search_web FROM users WHERE username = ?", (username,))
+        cursor.execute("SELECT id, username, role, can_search_web FROM users WHERE username = %s", (username,))
         row = cursor.fetchone()
         conn.close()
 
@@ -90,9 +97,9 @@ class PermissionUpdateRequest(BaseModel):
 @limiter.limit("5/minute")
 @app.post("/token")
 def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
-    conn = sqlite3.connect("chatbot.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT username, hashed_password FROM users WHERE username = ?", (form_data.username.strip(),))
+    cursor.execute("SELECT username, hashed_password FROM users WHERE username = %s", (form_data.username.strip(),))
     row = cursor.fetchone()
     conn.close()
 
@@ -111,7 +118,7 @@ def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
 
 def get_answer_from_db(user_question):
     MINIMUM_SCORE = 4
-    conn = sqlite3.connect("chatbot.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT question, answer FROM knowledge_base")
     results = cursor.fetchall()
@@ -149,9 +156,9 @@ def search_serper(query):
         return "Fejl ved websøgning."
 
 def log_interaction(username, question, answer):
-    conn = sqlite3.connect("chatbot.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO logs (username, question, answer) VALUES (?, ?, ?)", (username, question, answer))
+    cursor.execute("INSERT INTO logs (username, question, answer) VALUES (%s, %s, %s)", (username, question, answer))
     conn.commit()
     conn.close()
 
@@ -186,18 +193,18 @@ def chat(request: Request, payload: ChatPayload, user: dict = Depends(get_curren
 def add_question(query: Query, user: dict = Depends(get_current_user)):
     if user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    conn = sqlite3.connect("chatbot.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO knowledge_base (question, answer) VALUES (?, ?)", (query.question.lower(), query.answer))
+    cursor.execute("INSERT INTO knowledge_base (question, answer) VALUES (%s, %s)", (query.question.lower(), query.answer))
     conn.commit()
     conn.close()
     return {"message": "Spørgsmål tilføjet!"}
 
 @app.get("/my_logs")
 def get_my_logs(user: dict = Depends(get_current_user)):
-    conn = sqlite3.connect("chatbot.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT timestamp, question, answer FROM logs WHERE username = ? ORDER BY timestamp DESC", (user["username"],))
+    cursor.execute("SELECT timestamp, question, answer FROM logs WHERE username = %s ORDER BY timestamp DESC", (user["username"],))
     rows = cursor.fetchall()
     conn.close()
     return {"logs": [{"timestamp": row[0], "question": row[1], "answer": row[2]} for row in rows]}
@@ -206,7 +213,7 @@ def get_my_logs(user: dict = Depends(get_current_user)):
 def get_all_users(current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Adgang nægtet")
-    conn = sqlite3.connect("chatbot.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT username, role, can_search_web FROM users")
     rows = cursor.fetchall()
@@ -217,17 +224,25 @@ def get_all_users(current_user: dict = Depends(get_current_user)):
 def update_web_access(data: PermissionUpdateRequest, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Adgang nægtet")
-    conn = sqlite3.connect("chatbot.db")
+
+    conn = get_db_connection()
     cursor = conn.cursor()
+
     for user in data.users:
-        cursor.execute("UPDATE users SET can_search_web = ? WHERE username = ?", (user.can_search_web, user.username))
+        cursor.execute(
+            "UPDATE users SET can_search_web = %s WHERE username = %s",
+            (user.can_search_web, user.username)
+        )
+
     conn.commit()
     conn.close()
+
     return {"message": "Webadgange opdateret"}
+
 
 @app.get("/admin/logs", response_class=HTMLResponse)
 async def show_logs():
-    conn = sqlite3.connect("chatbot.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM logs ORDER BY timestamp DESC")
     rows = cursor.fetchall()
@@ -270,7 +285,7 @@ async def show_logs():
 
 @app.get("/admin/feedback", response_class=HTMLResponse)
 async def show_feedback():
-    conn = sqlite3.connect("chatbot.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM feedback ORDER BY timestamp DESC")
     rows = cursor.fetchall()
@@ -310,6 +325,7 @@ async def show_feedback():
     </html>
     """
     return html
+
 
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_dashboard():
